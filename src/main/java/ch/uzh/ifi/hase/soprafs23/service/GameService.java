@@ -114,8 +114,7 @@ public class GameService {
         List<Round> rounds = new ArrayList<Round>(lobby.getLobbySetting().getMaxRounds());
         Round round = new Round();
         round.setOpen(true);
-        LocalDateTime now = LocalDateTime.now();
-        round.setStartedAt(now);
+        round.setStartedAt(LocalDateTime.now());
         round.setRoundNumber(1);
         rounds.add(0, round);
 
