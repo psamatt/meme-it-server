@@ -35,7 +35,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class GameService {
     private final Logger log = LoggerFactory.getLogger(LobbyService.class);
 
-    private final IMemeApi memeApi = new ImgflipClient();
+    private final IMemeApi memeApi;
 
     private final LobbyService lobbyService;
 
@@ -46,9 +46,15 @@ public class GameService {
     @Autowired
     public GameService(@Qualifier("gameRepository") GameRepository gameRepository, JobScheduler jobScheduler,
             LobbyService lobbyService) {
+        this(gameRepository, jobScheduler, lobbyService, new ImgflipClient());
+    }
+
+    public GameService(GameRepository gameRepository, JobScheduler jobScheduler,
+                       LobbyService lobbyService, IMemeApi memeApi) {
         this.gameRepository = gameRepository;
         this.jobScheduler = jobScheduler;
         this.lobbyService = lobbyService;
+        this.memeApi = memeApi;
     }
 
     /**
@@ -108,7 +114,8 @@ public class GameService {
         List<Round> rounds = new ArrayList<Round>(lobby.getLobbySetting().getMaxRounds());
         Round round = new Round();
         round.setOpen(true);
-        round.setStartedAt(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        round.setStartedAt(now);
         round.setRoundNumber(1);
         rounds.add(0, round);
 
