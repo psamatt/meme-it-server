@@ -1,46 +1,43 @@
 package ch.uzh.ifi.hase.soprafs23.service;
 
+import static ch.uzh.ifi.hase.soprafs23.EntityMother.buildFullGame;
+import static ch.uzh.ifi.hase.soprafs23.EntityMother.defaulTextBox;
+import static ch.uzh.ifi.hase.soprafs23.EntityMother.defaultLobby;
+import static ch.uzh.ifi.hase.soprafs23.EntityMother.defaultMeme;
+import static ch.uzh.ifi.hase.soprafs23.EntityMother.defaultRating;
+import static ch.uzh.ifi.hase.soprafs23.EntityMother.defaultUser;
+import static ch.uzh.ifi.hase.soprafs23.EntityMother.openRound;
+import static org.assertj.core.api.Assertions.catchThrowable;
+
 import ch.uzh.ifi.hase.soprafs23.entity.Game;
 import ch.uzh.ifi.hase.soprafs23.entity.GameState;
+import ch.uzh.ifi.hase.soprafs23.entity.Lobby;
 import ch.uzh.ifi.hase.soprafs23.entity.Meme;
-import ch.uzh.ifi.hase.soprafs23.entity.Player;
-import ch.uzh.ifi.hase.soprafs23.entity.PlayerState;
 import ch.uzh.ifi.hase.soprafs23.entity.Rating;
 import ch.uzh.ifi.hase.soprafs23.entity.Round;
 import ch.uzh.ifi.hase.soprafs23.entity.Template;
+import ch.uzh.ifi.hase.soprafs23.entity.TextBox;
 import ch.uzh.ifi.hase.soprafs23.entity.User;
-import ch.uzh.ifi.hase.soprafs23.repository.GameRepository;
-import ch.uzh.ifi.hase.soprafs23.utility.memeapi.IMemeApi;
 import ch.uzh.ifi.hase.soprafs23.utility.memeapi.ImgflipClient;
 import org.assertj.core.groups.Tuple;
-import org.jobrunr.scheduling.JobScheduler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import ch.uzh.ifi.hase.soprafs23.utility.memeapi.IMemeApi;
+import ch.uzh.ifi.hase.soprafs23.repository.GameRepository;
+import ch.uzh.ifi.hase.soprafs23.repository.MemeRepository;
+import ch.uzh.ifi.hase.soprafs23.repository.TextBoxRepository;
+import ch.uzh.ifi.hase.soprafs23.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import static ch.uzh.ifi.hase.soprafs23.EntityMother.buildFullGame;
-import static ch.uzh.ifi.hase.soprafs23.EntityMother.closedRound;
-import static ch.uzh.ifi.hase.soprafs23.EntityMother.defaultLobby;
-import static ch.uzh.ifi.hase.soprafs23.EntityMother.defaultMeme;
-import static ch.uzh.ifi.hase.soprafs23.EntityMother.defaultRating;
-import static ch.uzh.ifi.hase.soprafs23.EntityMother.defaultUser;
-import static ch.uzh.ifi.hase.soprafs23.EntityMother.notReadyPlayerWithUser;
-import static ch.uzh.ifi.hase.soprafs23.EntityMother.openRound;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,14 +49,19 @@ public class GameServiceTest {
     @Mock
     private LobbyService lobbyService;
     @Mock
-    private IMemeApi iMemeApi;
+    private MemeRepository memeRepository;
     @Mock
-    private JobScheduler jobScheduler;
+    private TextBoxRepository textBoxRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private IMemeApi iMemeApi;
+
     private GameService gameService;
 
     @BeforeEach
     public void setup() {
-        gameService = new GameService(gameRepository, jobScheduler, lobbyService, iMemeApi);
+        gameService = new GameService(gameRepository, lobbyService, memeRepository, textBoxRepository, userRepository, iMemeApi);
     }
 
     @Test
@@ -68,7 +70,8 @@ public class GameServiceTest {
         when(iMemeApi.getTemplates()).thenReturn(apiResponse);
 
         String lobbyCode = "lobbyCode";
-        when(lobbyService.getLobbyByCode(lobbyCode)).thenReturn(defaultLobby());
+        Lobby lobby = defaultLobby();
+        when(lobbyService.getLobbyByCode(lobbyCode)).thenReturn(lobby);
 
         Game game = gameService.createGame(lobbyCode);
 
@@ -76,15 +79,13 @@ public class GameServiceTest {
         verify(gameRepository).flush();
         verify(lobbyService).setGameStarted(lobbyCode, game.getId(), game.getStartedAt());
 
-
         assertThat(game.getState()).isEqualTo(GameState.CREATION);
         assertThat(game.getCurrentRound()).isEqualTo(1);
         assertThat(game.getTemplates())
                 .extracting("imageUrl")
                         .contains(apiResponse.data.memes.get(0).url);
         assertThat(game.getPlayers())
-                .extracting("state")
-                .containsExactly(PlayerState.READY);
+                .isEqualTo(lobby.getPlayers());
         assertThat(game.getRounds()).hasSize(1);
         assertThat(game.getRounds())
                 .extracting("isOpen", "roundNumber")
@@ -138,6 +139,40 @@ public class GameServiceTest {
     }
 
     @Test
+    public void swapTemplate_validGameId_swapLimitReached() {
+        String gameId = "gameId";
+        User user = defaultUser();
+        user.setExecutedSwaps(100);
+        Game game = buildFullGame(new Date(), "templateId");
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
+
+        Throwable t = catchThrowable(() -> gameService.swapTemplate(gameId, user));
+
+        assertThat(t).usingRecursiveComparison()
+                .isInstanceOf(ResponseStatusException.class)
+                .isEqualTo(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Swap Limit already reached"));
+    }
+
+    @Test
+    public void swapTemplate_validGameId_success() {
+        String gameId = "gameId";
+        User user = defaultUser();
+        user.setExecutedSwaps(0);
+        Game game = buildFullGame(new Date(), "templateId");
+        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
+
+        Template template = gameService.swapTemplate(gameId, user);
+
+        ArgumentCaptor<User> userArgumentCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userArgumentCaptor.capture());
+        User actualUser = userArgumentCaptor.getValue();
+
+        assertThat(actualUser.getExecutedSwaps()).isEqualTo(1);
+        assertThat(template).isEqualTo(game.getTemplate());
+    }
+
+
+    @Test
     public void createMeme_validGameId_success() {
         String gameId = "gameId";
         String templateId = "templateId";
@@ -149,6 +184,7 @@ public class GameServiceTest {
 
         gameService.createMeme(gameId, templateId, meme, defaultUser());
 
+        verify(memeRepository).save(any(Meme.class));
         verify(gameRepository).save(any(Game.class));
         verify(gameRepository).flush();
     }
@@ -168,38 +204,26 @@ public class GameServiceTest {
     }
 
     @Test
-    public void createMeme_closedRound_failure() {
-        String gameId = "gameId";
-        String templateId = "templateId";
-
-        Game game = buildFullGame(new Date(), "templateId");
-        game.setRound(closedRound());
-        Meme meme = defaultMeme(UUID.randomUUID());
-
-        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
-
-        Throwable t = catchThrowable(() -> gameService.createMeme(gameId, templateId, meme, defaultUser()));
-
-        assertThat(t).usingRecursiveComparison()
-                .isInstanceOf(ResponseStatusException.class)
-                .isEqualTo(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Round is not open"));
-    }
-
-    @Test
     public void getMemes_validGameId_success() {
         String gameId = "gameId";
         Game game = buildFullGame(new Date(), "templateId");
-        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
+        Meme meme = defaultMeme(UUID.randomUUID());
+        TextBox textBox = defaulTextBox();
+        when(gameRepository.findByIdWithRounds(gameId)).thenReturn(Optional.of(game));
+        when(memeRepository.findAllByRound_Id(game.getRound().getId())).thenReturn(List.of(meme));
+        when(textBoxRepository.findAllByMeme_Id(meme.getId())).thenReturn(List.of(textBox));
 
         List<Meme> memes = gameService.getMemes(gameId);
 
-        assertThat(memes).isEqualTo(game.getRound().getMemes());
+        assertThat(memes).containsExactly(meme);
+        assertThat(memes).flatExtracting("textBoxes")
+                .containsExactly(textBox);
     }
 
     @Test
     public void getMemes_unknownGameId_failure() {
         String gameId = "gameId";
-        when(gameRepository.findById(gameId)).thenReturn(Optional.empty());
+        when(gameRepository.findByIdWithRounds(gameId)).thenReturn(Optional.empty());
 
         Throwable t = catchThrowable(() -> gameService.getMemes(gameId));
 
@@ -211,7 +235,7 @@ public class GameServiceTest {
     @Test
     public void createRating_unknownGameId_failure() {
         String gameId = "gameId";
-        UUID memeId = UUID.randomUUID();
+        String memeId = UUID.randomUUID().toString();
         when(gameRepository.findById(gameId)).thenReturn(Optional.empty());
 
         Throwable t = catchThrowable(() -> gameService.createRating(gameId, memeId, defaultRating(), defaultUser()));
@@ -224,7 +248,7 @@ public class GameServiceTest {
     @Test
     public void createRating_unknownMemeId_failure() {
         String gameId = "gameId";
-        UUID unknownMemeId = UUID.randomUUID();
+        String unknownMemeId = UUID.randomUUID().toString();
         Game game = buildFullGame(new Date(), "templateId");
         when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
 
@@ -240,71 +264,15 @@ public class GameServiceTest {
         String gameId = "gameId";
         UUID memeId = UUID.randomUUID();
         Game game = buildFullGame(new Date(), "templateId");
-        Round round = openRound();
+        Round round = openRound(new Date());
         round.setMemes(List.of(defaultMeme(memeId)));
         game.setRounds(Arrays.asList(round));
         when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
 
-        gameService.createRating(gameId, memeId, defaultRating(), defaultUser());
+        gameService.createRating(gameId, memeId.toString(), defaultRating(), defaultUser());
 
         verify(gameRepository).save(any(Game.class));
         verify(gameRepository).flush();
-    }
-
-    @Test
-    public void setPlayerReady_validGameId_success() {
-        String gameId = "gameId";
-        User user = defaultUser();
-        Game game = buildFullGame(new Date(), "templateId");
-        List<Player> players = List.of(notReadyPlayerWithUser(user));
-        game.setPlayers(players);
-        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
-
-        gameService.setPlayerReady(gameId, user);
-
-
-        ArgumentCaptor<Game> gameArgumentCaptor = ArgumentCaptor.forClass(Game.class);
-        verify(gameRepository).save(gameArgumentCaptor.capture());
-        verify(gameRepository).flush();
-
-        Game actual = gameArgumentCaptor.getValue();
-        assertThat(actual.getPlayers())
-                .extracting("state")
-                .contains(PlayerState.READY);
-    }
-
-    @Test
-    public void setPlayerReady_noMatchingUserId_failure() {
-        String gameId = "gameId";
-        User user = defaultUser();
-        user.setId("unknownId");
-        Game game = buildFullGame(new Date(), "templateId");
-        List<Player> players = List.of(notReadyPlayerWithUser(user));
-        game.setPlayers(players);
-        when(gameRepository.findById(gameId)).thenReturn(Optional.of(game));
-
-        gameService.setPlayerReady(gameId, defaultUser());
-
-        ArgumentCaptor<Game> gameArgumentCaptor = ArgumentCaptor.forClass(Game.class);
-        verify(gameRepository).save(gameArgumentCaptor.capture());
-        verify(gameRepository).flush();
-
-        Game actual = gameArgumentCaptor.getValue();
-        assertThat(actual.getPlayers())
-                .extracting("state")
-                .contains(PlayerState.NOT_READY);
-    }
-
-    @Test
-    public void setPlayerReady_invalidGameId_failure() {
-        String gameId = "gameId";
-        when(gameRepository.findById(gameId)).thenReturn(Optional.empty());
-
-        Throwable t = catchThrowable(() -> gameService.setPlayerReady(gameId, defaultUser()));
-
-        assertThat(t).usingRecursiveComparison()
-                .isInstanceOf(ResponseStatusException.class)
-                .isEqualTo(new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
     }
 
     @Test

@@ -36,7 +36,7 @@ public class EntityMother {
 
     public static Meme defaultMeme(UUID memeId) {
         Meme m = new Meme();
-        setPrivateFieldValue(m, "id", memeId);
+        setPrivateFieldValue(m, "id", memeId.toString());
         m.setUser(defaultUser());
         m.setTemplate(defaultTemplate("templateId"));
         m.setColor("color");
@@ -58,16 +58,17 @@ public class EntityMother {
         return t;
     }
 
-    public static Round openRound() {
+    public static Round openRound(Date date) {
         Round r = new Round();
         r.setOpen(true);
         r.setMemes(new ArrayList<>());
         r.setRatings(new ArrayList<>());
+        r.setStartedAt(date);
         return r;
     }
 
-    public static Round closedRound() {
-        Round r = openRound();
+    public static Round closedRound(Date date) {
+        Round r = openRound(date);
         r.setOpen(false);
         return r;
     }
@@ -78,9 +79,9 @@ public class EntityMother {
         g.setCurrentRound(1);
         g.setStartedAt(date);
         g.setGameSetting(defaultGameSetting());
-        g.setPlayers(List.of(notReadyPlayer()));
+        g.setPlayers(List.of(defaultUser()));
         g.setTemplates(List.of(defaultTemplate(templateId)));
-        g.setRounds(Arrays.asList(openRound()));
+        g.setRounds(Arrays.asList(openRound(date)));
         return g;
     }
 
@@ -89,21 +90,9 @@ public class EntityMother {
         gs.setRatingDuration(1);
         gs.setMaxRounds(1);
         gs.setRatingDuration(10);
+        gs.setRoundResultDuration(5);
+        gs.setTemplateSwapLimit(5);
         return gs;
-    }
-
-    public static Player notReadyPlayer() {
-        Player p = new Player();
-        p.setState(PlayerState.NOT_READY);
-        p.setUser(defaultUser());
-        return p;
-    }
-
-    public static Player notReadyPlayerWithUser(User user) {
-        Player p = new Player();
-        p.setState(PlayerState.NOT_READY);
-        p.setUser(user);
-        return p;
     }
 
     public static User defaultUser() {

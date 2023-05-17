@@ -53,4 +53,16 @@ public class UserServiceTest {
         assertEquals(testUser.getName(), createdUser.getName());
 
     }
+
+    @Test
+    public void getById_validId_success() {
+        String testUserId = UUID.randomUUID().toString();
+        testUser.setId(testUserId);
+        Mockito.when(userRepository.findById(testUserId)).thenReturn(testUser);
+
+        User retrievedUser = userService.getById(testUserId);
+
+        assertNotNull(retrievedUser);
+        assertEquals(testUserId, retrievedUser.getId());
+    }
 }

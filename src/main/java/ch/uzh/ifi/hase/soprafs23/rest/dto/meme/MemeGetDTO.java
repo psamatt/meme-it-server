@@ -1,26 +1,29 @@
 package ch.uzh.ifi.hase.soprafs23.rest.dto.meme;
 
 import java.util.List;
-import java.util.UUID;
 
 import ch.uzh.ifi.hase.soprafs23.entity.TextBox;
 import ch.uzh.ifi.hase.soprafs23.entity.User;
 
 public class MemeGetDTO {
 
-    private UUID id;
+    private String id;
 
     private String imageUrl;
 
     private List<TextBox> textBoxes;
 
-    // private User user;
+    private int fontSize;
+    private String color;
+    private String backgroundColor;
 
-    public UUID getId() {
+    private User user;
+
+    public String getId() {
         return id;
     }
 
-    public void setId(UUID uuid) {
+    public void setId(String uuid) {
         this.id = uuid;
     }
 
@@ -40,12 +43,35 @@ public class MemeGetDTO {
         this.textBoxes = textBoxes;
     }
 
-    // public User getUser() {
-    // return user;
-    // }
+    public int getFontSize() {
+        return fontSize;
+    }
 
-    // public void setUser(User user) {
-    // this.user = user;
-    // }
+    public void setFontSize(int fontSize) {
+        this.fontSize = fontSize;
+    }
 
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public String getBackgroundColor() {
+        return backgroundColor;
+    }
+
+    public void setBackgroundColor(String backgroundColor) {
+        this.backgroundColor = backgroundColor;
+    }
 }

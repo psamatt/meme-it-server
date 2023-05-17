@@ -1,12 +1,33 @@
 package ch.uzh.ifi.hase.soprafs23.entity;
 
-import javax.persistence.Embeddable;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
-@Embeddable
+import javax.persistence.*;
+
+@Entity
+@Table(name = "TEXTBOX")
 public class TextBox {
-    public String text;
-    public Integer x;
-    public Integer y;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String text;
+    private Integer xRate;
+    private Integer yRate;
+    @ManyToOne
+    @JsonIgnore
+    private Meme meme;
+
+    public TextBox(){}
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
 
     public String getText() {
         return text;
@@ -16,19 +37,27 @@ public class TextBox {
         this.text = text;
     }
 
-    public Integer getX() {
-        return x;
+    public Integer getxRate() {
+        return xRate;
     }
 
-    public void setX(Integer x) {
-        this.x = x;
+    public void setxRate(Integer xRate) {
+        this.xRate = xRate;
     }
 
-    public Integer getY() {
-        return y;
+    public Integer getyRate() {
+        return yRate;
     }
 
-    public void setY(Integer y) {
-        this.y = y;
+    public void setyRate(Integer yRate) {
+        this.yRate = yRate;
+    }
+
+    public Meme getMeme() {
+        return meme;
+    }
+
+    public void setMeme(Meme meme) {
+        this.meme = meme;
     }
 }

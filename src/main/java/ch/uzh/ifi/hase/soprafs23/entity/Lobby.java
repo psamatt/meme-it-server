@@ -2,6 +2,7 @@ package ch.uzh.ifi.hase.soprafs23.entity;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.StreamSupport;
@@ -41,7 +42,7 @@ public class Lobby implements Serializable {
     @Column(nullable = false)
     private boolean isJoinable;
 
-    private Date gameStartedAT;
+    private Date gameStartedAt;
 
     private String gameId;
 
@@ -104,6 +105,14 @@ public class Lobby implements Serializable {
     }
 
     public void addPlayer(User player) {
+        if (this.players == null) {
+            this.players = new ArrayList<User>();
+        }
+
+        if (this.kickedPlayers == null) {
+            this.kickedPlayers = new ArrayList<User>();
+        }
+
         // check if player is already in lobby
         if (containsUser(this.players, player)) {
             throw new IllegalArgumentException("Player is already in the lobby");
@@ -166,12 +175,12 @@ public class Lobby implements Serializable {
 
     }
 
-    public Date getGameStartedAT() {
-        return gameStartedAT;
+    public Date getGameStartedAt() {
+        return gameStartedAt;
     }
 
-    public void setGameStartedAT(Date gameStartedAt) {
-        this.gameStartedAT = gameStartedAt;
+    public void setGameStartedAt(Date gameStartedAt) {
+        this.gameStartedAt = gameStartedAt;
     }
 
     public String getGameId() {

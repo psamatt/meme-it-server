@@ -1,28 +1,23 @@
 package ch.uzh.ifi.hase.soprafs23.service;
 
-import ch.uzh.ifi.hase.soprafs23.entity.Game;
-import ch.uzh.ifi.hase.soprafs23.entity.GameSetting;
-import ch.uzh.ifi.hase.soprafs23.entity.GameState;
-import ch.uzh.ifi.hase.soprafs23.entity.Lobby;
-import ch.uzh.ifi.hase.soprafs23.entity.Meme;
-import ch.uzh.ifi.hase.soprafs23.entity.Player;
-import ch.uzh.ifi.hase.soprafs23.entity.PlayerState;
+import ch.uzh.ifi.hase.soprafs23.entity.*;
 
-import ch.uzh.ifi.hase.soprafs23.entity.Rating;
-import ch.uzh.ifi.hase.soprafs23.entity.Round;
-import ch.uzh.ifi.hase.soprafs23.entity.Template;
-import ch.uzh.ifi.hase.soprafs23.entity.User;
 import ch.uzh.ifi.hase.soprafs23.repository.GameRepository;
+import ch.uzh.ifi.hase.soprafs23.repository.MemeRepository;
+import ch.uzh.ifi.hase.soprafs23.repository.TextBoxRepository;
+import ch.uzh.ifi.hase.soprafs23.repository.UserRepository;
 import ch.uzh.ifi.hase.soprafs23.utility.memeapi.IMemeApi;
 import ch.uzh.ifi.hase.soprafs23.utility.memeapi.ImgflipClient;
 import ch.uzh.ifi.hase.soprafs23.utility.memeapi.ImgflipClient.ApiResponse;
 
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
 
-import org.jobrunr.scheduling.JobScheduler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.List;
+
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -33,28 +28,35 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 @Transactional
 public class GameService {
-    private final Logger log = LoggerFactory.getLogger(LobbyService.class);
+    // private final Logger log = LoggerFactory.getLogger(GameService.class);
 
     private final IMemeApi memeApi;
 
     private final LobbyService lobbyService;
 
     private final GameRepository gameRepository;
+    private final MemeRepository memeRepository;
+    private final TextBoxRepository textBoxRepository;
+    private final UserRepository userRepository;
 
-    private final JobScheduler jobScheduler;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Autowired
-    public GameService(@Qualifier("gameRepository") GameRepository gameRepository, JobScheduler jobScheduler,
-            LobbyService lobbyService) {
-        this(gameRepository, jobScheduler, lobbyService, new ImgflipClient());
+    public GameService(@Qualifier("gameRepository") GameRepository gameRepository,
+                       LobbyService lobbyService, MemeRepository memeRepository, TextBoxRepository textBoxRepository,
+                       UserRepository userRepository) {
+        this(gameRepository, lobbyService, memeRepository, textBoxRepository, userRepository, new ImgflipClient());
     }
 
-    public GameService(GameRepository gameRepository, JobScheduler jobScheduler,
-                       LobbyService lobbyService, IMemeApi memeApi) {
+    public GameService(GameRepository gameRepository, LobbyService lobbyService, MemeRepository memeRepository, TextBoxRepository textBoxRepository, UserRepository userRepository, IMemeApi iMemeApi) {
+
         this.gameRepository = gameRepository;
-        this.jobScheduler = jobScheduler;
         this.lobbyService = lobbyService;
-        this.memeApi = memeApi;
+        this.memeRepository = memeRepository;
+        this.textBoxRepository = textBoxRepository;
+        this.userRepository = userRepository;
+        memeApi = iMemeApi;
     }
 
     /**
@@ -84,6 +86,7 @@ public class GameService {
         gameSetting.setRoundDuration(lobby.getLobbySetting().getRoundDuration());
         gameSetting.setRatingDuration(lobby.getLobbySetting().getRatingDuration());
         gameSetting.setTemplateSwapLimit(lobby.getLobbySetting().getMemeChangeLimit());
+        gameSetting.setRoundResultDuration(20); // ! default 20 seconds
         newGame.setGameSetting(gameSetting);
 
         // set round
@@ -91,45 +94,42 @@ public class GameService {
 
         // initialise players
         List<User> users = lobby.getPlayers();
-        List<Player> players = new ArrayList<Player>(users.size());
-        for (User user : users) {
-            Player player = new Player();
-
-            player.setUser(user);
-            player.setState(PlayerState.READY);
-
+        // shitty fix but other wise error is thrown:
+        // org.hibernate.HibernateException: Found shared references to a collection
+        // ! this currently duplicates the users in the db
+        List<User> players = new ArrayList<User>(users.size());
+        for (var user : users) {
+            User player = new User();
+            player.setId(user.getId());
+            player.setName(user.getName());
             players.add(player);
         }
         newGame.setPlayers(players);
-        Calendar calendar = Calendar.getInstance();
-        Date currentDate = calendar.getTime();
 
         // Add 2 seconds to the current time
-        calendar.setTime(currentDate);
-        calendar.add(Calendar.SECOND, 5);
-
+        Calendar calendar = Calendar.getInstance();
         newGame.setStartedAt(calendar.getTime());
 
-        // initialise first round
+        // initialise rounds array
         List<Round> rounds = new ArrayList<Round>(lobby.getLobbySetting().getMaxRounds());
+        newGame.setRounds(rounds);
+
+        // initialise first round
         Round round = new Round();
         round.setOpen(true);
-        round.setStartedAt(LocalDateTime.now());
         round.setRoundNumber(1);
-        rounds.add(0, round);
-
-        newGame.setRounds(rounds);
+        round.setStartedAt(calendar.getTime()); // round starts same time as game
+        newGame.addRound(round);
 
         save(newGame);
 
-        // start game job
-        // * game job takes care of updating game state
-        // ! Bug with the game job
-        // jobScheduler.enqueue(() -> exectue(newGame.getId()));
-
+        // inform lobby that game has started
         lobbyService.setGameStarted(lobbyCode, newGame.getId(), newGame.getStartedAt());
 
+        // TODO: figure out way to delete lobby
+
         return newGame;
+
     }
 
     /**
@@ -162,6 +162,24 @@ public class GameService {
     }
 
     /**
+     *
+     * @param gameId
+     * @param user
+     * @return
+     */
+    public Template swapTemplate(String gameId, User user) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
+
+        if (user.getExecutedSwaps() < game.getGameSetting().getTemplateSwapLimit()) {
+            user.setExecutedSwaps(user.getExecutedSwaps() + 1);
+            userRepository.save(user);
+            return game.getTemplate();
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Swap Limit already reached");
+    }
+
+    /**
      * Submits a meme of a user
      * 
      * @param gameId
@@ -173,13 +191,18 @@ public class GameService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
 
         meme.setUser(user);
-
+        for (TextBox t : meme.getTextBoxes()) {
+            t.setMeme(meme);
+        }
         Round round = game.getRound();
 
         // check if round still open
-        if (!round.isOpen()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Round is not open");
-        }
+        /*
+         * TODO: if (!round.isOpen()) {
+         * throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+         * "Round is not open");
+         * }
+         */
 
         // set user chosen template
         Template template = game.getTemplateById(templateId);
@@ -187,22 +210,36 @@ public class GameService {
 
         // add meme to the round
         round.addMeme(meme);
-
+        meme.setRound(round);
         // update round
         game.setRound(round);
-
+        memeRepository.save(meme);
         // perist changes
         save(game);
 
     }
 
     public List<Meme> getMemes(String gameId) {
-        Game game = gameRepository.findById(gameId)
+        Game game = gameRepository.findByIdWithRounds(gameId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
 
         Round round = game.getRound();
+        List<Meme> memes = findMemesByRoundId(round.getId());
 
-        return round.getMemes();
+        for (Meme meme : memes) {
+            List<TextBox> textBoxes = findTextBoxesByMemeId(meme.getId());
+            meme.setTextBoxes(textBoxes);
+        }
+
+        return memes;
+    }
+
+    public List<Meme> findMemesByRoundId(Long roundId) {
+        return memeRepository.findAllByRound_Id(roundId);
+    }
+
+    public List<TextBox> findTextBoxesByMemeId(String memeId) {
+        return textBoxRepository.findAllByMeme_Id(memeId);
     }
 
     /**
@@ -213,7 +250,7 @@ public class GameService {
      * @param rating
      * @param user
      */
-    public void createRating(String gameId, UUID memeId, Rating rating, User user) {
+    public void createRating(String gameId, String memeId, Rating rating, User user) {
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
 
@@ -233,30 +270,6 @@ public class GameService {
 
         // update round
         game.setRound(round);
-
-        // perist changes
-        save(game);
-    }
-
-    /**
-     * Sets a player state to ready, meaning they are ready to start the next round
-     * 
-     * @param gameId
-     * @param user
-     */
-    public void setPlayerReady(String gameId, User user) {
-        Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Game not found"));
-
-        List<Player> players = game.getPlayers();
-
-        for (Player player : players) {
-            if (user.getId() == player.getUser().getId()) {
-                player.setState(PlayerState.READY);
-            }
-        }
-
-        game.setPlayers(players);
 
         // perist changes
         save(game);
@@ -308,89 +321,4 @@ public class GameService {
         gameRepository.flush();
     }
 
-    /**
-     * Executes the job which will manage the state throughout the lifetime of the
-     * game
-     * 
-     * @param gameId
-     */
-    public void exectue(String gameId) {
-        while (true) {
-            Game game = getGame(gameId);
-            // get game players
-            List<Player> players = game.getPlayers();
-            // get current round
-            Round round = game.getRound();
-
-            // if equal it means everyone submited
-            if (round.getSubmitedMemes().size() == players.size()) {
-                // close round
-                round.setOpen(false);
-                // start voting phase
-                game.setState(GameState.RATING);
-
-                log.info(gameId + " - Round " + game.getCurrentRound() + " Phase RATING");
-            }
-
-            // if equal it means everyone rated
-            else if (round.getRatings().size() == players.size()) {
-                // start round result phase
-                game.setState(GameState.ROUND_RESULTS);
-
-                log.info(gameId + " - Round " + game.getCurrentRound() + " Phase ROUND_RESULTS");
-            }
-
-            // check if game is finished
-            else if (game.getGameSetting().getMaxRounds() == game.getCurrentRound()) {
-                game.setState(GameState.GAME_RESULTS);
-
-                log.info(gameId + " - Round " + game.getCurrentRound() + " Phase GAME_RESULTS");
-            }
-
-            // game not finished yet
-            else {
-                // check if everyone is ready for next round
-                boolean allReady = false;
-                for (Player player : players) {
-                    if (player.getState() == PlayerState.READY) {
-                        allReady = true;
-                        continue;
-                    }
-                    allReady = false;
-                    break;
-                }
-                if (allReady) {
-                    // start creation phase
-                    game.setState(GameState.CREATION);
-                    // increment round
-                    game.setCurrentRound(game.getCurrentRound() + 1);
-                    // initialize new round
-                    Round nextRound = game.getRound();
-                    nextRound.setOpen(true);
-                    nextRound.setRoundNumber(null);
-                    nextRound.setStartedAt(LocalDateTime.now());
-                    game.setRound(nextRound);
-
-                    // reset player state
-                    for (Player player : players) {
-                        player.setState(PlayerState.NOT_READY);
-                    }
-                    game.setPlayers(players);
-
-                    log.info(gameId + " - Round " + game.getCurrentRound() + " Phase CREATION");
-                }
-            }
-
-            // persist changes
-            save(game);
-
-            // sleep for 1 second
-            try {
-                Thread.sleep(1_000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-    }
 }

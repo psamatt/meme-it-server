@@ -3,23 +3,25 @@ package ch.uzh.ifi.hase.soprafs23.utility.memeapi;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import ch.uzh.ifi.hase.soprafs23.entity.Template;
-
 public class ImgflipClient implements IMemeApi {
+    private final Logger log = LoggerFactory.getLogger(ImgflipClient.class);
 
-    private static final String ENDPOINT = "https://api.imgflip.com/get_memes";
+    private static final String ENDPOINT = "https://api.imgflip.com";
 
     public ApiResponse getTemplates() {
 
+        Scanner scanner = null;
         try {
-            URL url = new URL(ENDPOINT);
+            URL url = new URL(ENDPOINT + "/get_memes");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.connect();
@@ -29,7 +31,7 @@ public class ImgflipClient implements IMemeApi {
                 throw new RuntimeException("Failed with HTTP error code: " + responseCode);
             }
 
-            Scanner scanner = new Scanner(url.openStream());
+            scanner = new Scanner(url.openStream());
             String response = scanner.useDelimiter("\\A").next();
 
             ObjectMapper mapper = new ObjectMapper();
@@ -40,7 +42,10 @@ public class ImgflipClient implements IMemeApi {
             return apiResponse;
 
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error(e.toString());
+        } finally {
+            if (scanner != null)
+                scanner.close();
         }
 
         return null;

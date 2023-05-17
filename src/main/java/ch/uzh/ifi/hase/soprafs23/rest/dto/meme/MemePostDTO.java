@@ -9,6 +9,7 @@ public class MemePostDTO {
     private String color;
     private int currentRound;
     private int fontSize;
+    private String backgroundColor;
 
     private List<TextBox> textBoxes;
 
@@ -44,4 +45,11 @@ public class MemePostDTO {
         this.textBoxes = textBoxes;
     }
 
+    public String getBackgroundColor() {
+        return backgroundColor;
+    }
+
+    public void setBackgroundColor(String backgroundColor) {
+        this.backgroundColor = backgroundColor;
+    }
 }

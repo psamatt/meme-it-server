@@ -1,29 +1,29 @@
 package ch.uzh.ifi.hase.soprafs23.rest.dto.rating;
 
-import ch.uzh.ifi.hase.soprafs23.entity.Meme;
-import ch.uzh.ifi.hase.soprafs23.entity.User;
+import ch.uzh.ifi.hase.soprafs23.rest.dto.meme.MemeGetDTO;
+import ch.uzh.ifi.hase.soprafs23.rest.dto.user.UserGetDTO;
 
 public class RatingGetDTO {
 
-    private User user;
+    private UserGetDTO user;
 
-    private Meme meme;
+    private MemeGetDTO meme;
 
     private Integer rating;
 
-    public User getUser() {
+    public UserGetDTO getUser() {
         return user;
     }
 
-    public void setUser(User user) {
+    public void setUser(UserGetDTO user) {
         this.user = user;
     }
 
-    public Meme getMeme() {
+    public MemeGetDTO getMeme() {
         return meme;
     }
 
-    public void setMeme(Meme meme) {
+    public void setMeme(MemeGetDTO meme) {
         this.meme = meme;
     }
 

@@ -7,7 +7,6 @@ import ch.uzh.ifi.hase.soprafs23.rest.dto.user.UserPostDTO;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.jobrunr.jobs.mappers.JobMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,11 +31,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // * request without actually sending them over the network.
 // * This tests if the UserController works.
 // */
-@WebMvcTest(controllers = UserController.class,
-        excludeAutoConfiguration = {
-                SecurityAutoConfiguration.class,
-                JwtSecurityConfig.class
-        })
+@WebMvcTest(controllers = UserController.class, excludeAutoConfiguration = {
+        SecurityAutoConfiguration.class,
+        JwtSecurityConfig.class
+})
 public class UserControllerTest {
 
     @Autowired
@@ -44,9 +42,6 @@ public class UserControllerTest {
 
     @MockBean
     private UserService userService;
-
-    @MockBean
-    private JobMapper jobMapper;
 
     @Test
     public void createUser_newUser() throws Exception {

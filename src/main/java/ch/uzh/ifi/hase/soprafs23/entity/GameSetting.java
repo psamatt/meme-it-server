@@ -1,16 +1,31 @@
 package ch.uzh.ifi.hase.soprafs23.entity;
 
+import java.io.Serializable;
+
+import javax.persistence.Column;
 import javax.persistence.Embeddable;
 
+// * NOTE: using entity & table instead of embeddable did not solve the game state not updating
 @Embeddable
-public class GameSetting {
+public class GameSetting implements Serializable {
+    private static final long serialVersionUID = 1L;
 
+    @Column(nullable = false)
     private Integer maxRounds;
+
+    @Column(nullable = false)
     private Integer templateSwapLimit;
     // private Integer superLikeLimit;
     // private Integer superDislikeLimit;
+
+    @Column(nullable = false)
     private Integer roundDuration;
+
+    @Column(nullable = false)
     private Integer ratingDuration;
+
+    @Column(nullable = false)
+    private Integer roundResultDuration;
 
     public Integer getMaxRounds() {
         return maxRounds;
@@ -58,5 +73,13 @@ public class GameSetting {
 
     public void setRatingDuration(Integer ratingDuration) {
         this.ratingDuration = ratingDuration;
+    }
+
+    public Integer getRoundResultDuration() {
+        return roundResultDuration;
+    }
+
+    public void setRoundResultDuration(Integer roundResultDuration) {
+        this.roundResultDuration = roundResultDuration;
     }
 }

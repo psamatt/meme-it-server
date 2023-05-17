@@ -10,7 +10,6 @@ import ch.uzh.ifi.hase.soprafs23.rest.dto.user.UserPostDTO;
 import ch.uzh.ifi.hase.soprafs23.service.LobbyService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.jobrunr.jobs.mappers.JobMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,11 +43,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // * request without actually sending them over the network.
 // * This tests if the LobbyController works.
 // */
-@WebMvcTest(controllers = LobbyController.class,
-        excludeAutoConfiguration = {
+@WebMvcTest(controllers = LobbyController.class, excludeAutoConfiguration = {
                 SecurityAutoConfiguration.class,
                 JwtSecurityConfig.class
-        })
+})
 public class LobbyControllerTest {
 
         @Autowired
@@ -56,9 +54,6 @@ public class LobbyControllerTest {
 
         @MockBean
         private LobbyService lobbyService;
-
-        @MockBean
-        private JobMapper jobMapper;
 
         @Test
         public void givenLobbies_whenGetLobbies_thenReturnJsonArray() throws Exception {
@@ -195,15 +190,16 @@ public class LobbyControllerTest {
 
         }
 
-    private static void givenUserIsAuthenticated(User user) {
-        Authentication authentication = Mockito.mock(Authentication.class);
-        Mockito.when(authentication.getPrincipal()).thenReturn(user);
-        SecurityContext securityContext = Mockito.mock(SecurityContext.class);
-        Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
-        SecurityContextHolder.setContext(securityContext);
-    }
+        private static void givenUserIsAuthenticated(User user) {
+                Authentication authentication = Mockito.mock(Authentication.class);
+                Mockito.when(authentication.getPrincipal()).thenReturn(user);
+                SecurityContext securityContext = Mockito.mock(SecurityContext.class);
+                Mockito.when(securityContext.getAuthentication()).thenReturn(authentication);
+                SecurityContextHolder.setContext(securityContext);
+        }
 
-    @Test public void givenLobbies_whenGetLobby_thenReturnJsonArray() throws Exception {
+        @Test
+        public void givenLobbies_whenGetLobby_thenReturnJsonArray() throws Exception {
                 // given
                 User user = new User();
                 user.setName("owner name");

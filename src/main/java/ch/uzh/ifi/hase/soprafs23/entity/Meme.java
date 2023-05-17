@@ -2,7 +2,6 @@ package ch.uzh.ifi.hase.soprafs23.entity;
 
 import java.io.Serializable;
 import java.util.List;
-import java.util.UUID;
 
 import javax.persistence.*;
 
@@ -17,7 +16,7 @@ public class Meme implements Serializable {
     @Id
     @GeneratedValue(generator = "UUID")
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
-    private UUID id;
+    private String id;
 
     @OneToOne
     private Template template;
@@ -28,14 +27,20 @@ public class Meme implements Serializable {
     @Column(nullable = false)
     private int fontSize;
 
-    @Column(nullable = false)
-    @ElementCollection
+    @ManyToOne
+    @JoinColumn(name = "round_id", nullable = false)
+    private Round round;
+
+    @OneToMany(cascade = CascadeType.ALL)
     private List<TextBox> textBoxes;
 
     @OneToOne
     private User user;
 
-    public UUID getId() {
+    @Column(nullable = false)
+    private String backgroundColor;
+
+    public String getId() {
         return id;
     }
 
@@ -79,4 +84,19 @@ public class Meme implements Serializable {
         this.user = user;
     }
 
+    public Round getRound() {
+        return round;
+    }
+
+    public void setRound(Round round) {
+        this.round = round;
+    }
+
+    public String getBackgroundColor() {
+        return backgroundColor;
+    }
+
+    public void setBackgroundColor(String backgroundColor) {
+        this.backgroundColor = backgroundColor;
+    }
 }

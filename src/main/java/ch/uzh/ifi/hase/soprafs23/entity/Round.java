@@ -1,10 +1,9 @@
 package ch.uzh.ifi.hase.soprafs23.entity;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
 import javax.persistence.*;
 
@@ -14,10 +13,10 @@ public class Round implements Serializable {
 
     private static final long serialVersionUID = 1L;
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToMany(cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "round", cascade = CascadeType.ALL)
     private List<Meme> memes;
 
     @OneToMany(cascade = CascadeType.ALL)
@@ -30,7 +29,7 @@ public class Round implements Serializable {
     private boolean isOpen;
 
     @Column(nullable = false)
-    private LocalDateTime startedAt;
+    private Date startedAt;
 
     public Long getId() {
         return id;
@@ -70,7 +69,7 @@ public class Round implements Serializable {
         memes.add(meme);
     }
 
-    public Meme getMemeById(UUID id) {
+    public Meme getMemeById(String id) {
         for (Meme meme : memes) {
             if (meme.getId().equals(id)) {
                 return meme;
@@ -99,11 +98,11 @@ public class Round implements Serializable {
         isOpen = open;
     }
 
-    public LocalDateTime getStartedAt() {
+    public Date getStartedAt() {
         return startedAt;
     }
 
-    public void setStartedAt(LocalDateTime startedAt) {
+    public void setStartedAt(Date startedAt) {
         this.startedAt = startedAt;
     }
 

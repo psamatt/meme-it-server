@@ -2,14 +2,12 @@ package ch.uzh.ifi.hase.soprafs23.service;
 
 import ch.uzh.ifi.hase.soprafs23.entity.Lobby;
 import ch.uzh.ifi.hase.soprafs23.entity.Message;
-import ch.uzh.ifi.hase.soprafs23.entity.User;
 import ch.uzh.ifi.hase.soprafs23.repository.ChatRepository;
 import ch.uzh.ifi.hase.soprafs23.repository.LobbyRepository;
 import ch.uzh.ifi.hase.soprafs23.repository.UserRepository;
 import ch.uzh.ifi.hase.soprafs23.rest.dto.chat.ChatPostDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -25,13 +23,14 @@ public class ChatService {
     private final UserRepository userRepository;
     private final LobbyRepository lobbyRepository;
     private final ChatRepository chatRepository;
-    @Autowired
-    public ChatService(@Qualifier("lobbyRepository") LobbyRepository lobbyRepository, @Qualifier("chatRepository") ChatRepository chatRepository, @Qualifier("userRepository") UserRepository userRepository) {
+
+    public ChatService(@Qualifier("lobbyRepository") LobbyRepository lobbyRepository,
+            @Qualifier("chatRepository") ChatRepository chatRepository,
+            @Qualifier("userRepository") UserRepository userRepository) {
         this.lobbyRepository = lobbyRepository;
         this.chatRepository = chatRepository;
         this.userRepository = userRepository;
     }
-
 
     public List<Message> getProximityChatMessages(String lobbyCode) {
         return lobbyRepository.findByCode(lobbyCode).getMessages();

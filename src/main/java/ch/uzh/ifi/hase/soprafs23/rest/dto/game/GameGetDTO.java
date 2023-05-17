@@ -4,7 +4,7 @@ import java.util.Date;
 import java.util.List;
 
 import ch.uzh.ifi.hase.soprafs23.entity.GameState;
-import ch.uzh.ifi.hase.soprafs23.rest.dto.player.PlayerGetDTO;
+import ch.uzh.ifi.hase.soprafs23.rest.dto.user.UserGetDTO;
 
 public class GameGetDTO {
 
@@ -13,13 +13,15 @@ public class GameGetDTO {
 
     private Integer roundDuration;
     private Integer votingDuration;
+    private Integer roundResultDuration;
 
     private Integer currentRound;
 
     private Integer totalRounds;
 
+    private Date roundStartedAt;
     private Date startedAt;
-    private List<PlayerGetDTO> players;
+    private List<UserGetDTO> players;
 
     public String getId() {
         return id;
@@ -53,6 +55,14 @@ public class GameGetDTO {
         this.votingDuration = votingDuration;
     }
 
+    public Integer getRoundResultDuration() {
+        return roundResultDuration;
+    }
+
+    public void setRoundResultDuration(Integer roundResultDuration) {
+        this.roundResultDuration = roundResultDuration;
+    }
+
     public Integer getCurrentRound() {
         return currentRound;
     }
@@ -69,6 +79,14 @@ public class GameGetDTO {
         this.totalRounds = totalRounds;
     }
 
+    public Date getRoundStartedAt() {
+        return roundStartedAt;
+    }
+
+    public void setRoundStartedAt(Date roundStartedAt) {
+        this.roundStartedAt = roundStartedAt;
+    }
+
     public Date getStartedAt() {
         return startedAt;
     }
@@ -77,11 +95,11 @@ public class GameGetDTO {
         this.startedAt = startedAt;
     }
 
-    public List<PlayerGetDTO> getPlayers() {
+    public List<UserGetDTO> getPlayers() {
         return players;
     }
 
-    public void setPlayers(List<PlayerGetDTO> players) {
+    public void setPlayers(List<UserGetDTO> players) {
         this.players = players;
     }
 }

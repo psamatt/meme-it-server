@@ -31,6 +31,9 @@ public class User implements Serializable {
   @Column(nullable = false)
   private String name;
 
+  @Column(nullable = false)
+  private int executedSwaps;
+
   public String getId() {
     return id;
   }
@@ -47,7 +50,15 @@ public class User implements Serializable {
     this.name = name;
   }
 
-  @Override
+    public int getExecutedSwaps() {
+        return executedSwaps;
+    }
+
+    public void setExecutedSwaps(int executedSwaps) {
+        this.executedSwaps = executedSwaps;
+    }
+
+    @Override
   public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass())
       return false;

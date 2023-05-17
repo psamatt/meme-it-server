@@ -3,13 +3,10 @@ package ch.uzh.ifi.hase.soprafs23.controller;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-
-// import ch.uzh.ifi.hase.soprafs23.rest.dto.lobby.PutDTO;
 
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +15,7 @@ import ch.uzh.ifi.hase.soprafs23.entity.Meme;
 import ch.uzh.ifi.hase.soprafs23.entity.Rating;
 import ch.uzh.ifi.hase.soprafs23.entity.Template;
 import ch.uzh.ifi.hase.soprafs23.entity.User;
+import ch.uzh.ifi.hase.soprafs23.job.GameJob;
 import ch.uzh.ifi.hase.soprafs23.rest.dto.game.GameGetDTO;
 import ch.uzh.ifi.hase.soprafs23.rest.dto.meme.MemeGetDTO;
 import ch.uzh.ifi.hase.soprafs23.rest.dto.meme.MemePostDTO;
@@ -42,8 +40,11 @@ public class GameController {
 
     private final GameService gameService;
 
-    public GameController(GameService gameService) {
+    private final GameJob gameJob;
+
+    public GameController(GameService gameService, GameJob gameJob) {
         this.gameService = gameService;
+        this.gameJob = gameJob;
     }
 
     @PostMapping("/games/{lobbyCode}")
@@ -54,8 +55,20 @@ public class GameController {
         // create game
         Game game = gameService.createGame(lobbyCode);
 
+        // start game job
+        // * game job takes care of updating game state
+        Thread thread = new Thread(() -> gameJob.run(game.getId()));
+        thread.start();
+
         return GameMapper.INSTANCE.convertEntityToGameGetDTO(game);
     }
+
+    // ! doesnt return updated state
+    // i have tried
+    // - use @Async instead of Thread() to run job
+    // - increase timer of job to run every 2 - 5 seconds instead of 1 sec
+    // - Run job directly with gameRepo
+    //
 
     /**
      * Gets the current game state
@@ -83,6 +96,18 @@ public class GameController {
         User user = (User) authentication.getPrincipal();
 
         Template template = gameService.getTemplate(gameId, user);
+
+        return TemplateMapper.INSTANCE.convertEntityToGetDTO(template);
+    }
+
+    @PutMapping("/games/{gameId}/template")
+    @ResponseStatus(HttpStatus.OK)
+    @ResponseBody
+    public TemplateGetDTO swapTemplate(@PathVariable String gameId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = (User) authentication.getPrincipal();
+
+        Template template = gameService.swapTemplate(gameId, user);
 
         return TemplateMapper.INSTANCE.convertEntityToGetDTO(template);
     }
@@ -118,7 +143,7 @@ public class GameController {
 
         List<MemeGetDTO> memeGetDTOs = new ArrayList<>();
         for (Meme meme : memes) {
-            memeGetDTOs.add(MemeMapper.INSTANCE.convertEntityToGetDTO(meme));
+            memeGetDTOs.add(MemeMapper.INSTANCE.convertEntityToMemeGetDTO(meme));
         }
 
         return memeGetDTOs;
@@ -133,7 +158,7 @@ public class GameController {
      */
     @PostMapping("/games/{gameId}/rating/{memeId}")
     @ResponseStatus(HttpStatus.OK)
-    public void createRating(@PathVariable String gameId, @PathVariable UUID memeId,
+    public void createRating(@PathVariable String gameId, @PathVariable String memeId,
             @RequestBody RatingPostDTO ratingPostDTO) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User user = (User) authentication.getPrincipal();
@@ -143,29 +168,13 @@ public class GameController {
     }
 
     /**
-     * Sets a player as ready for next round
-     * 
-     * @param gameId
-     * @param memeId
-     * @param ratingPostDTO
-     */
-    @PostMapping("/games/{gameId}/ready")
-    @ResponseStatus(HttpStatus.OK)
-    public void setPlayerReady(@PathVariable String gameId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = (User) authentication.getPrincipal();
-
-        gameService.setPlayerReady(gameId, user);
-    }
-
-    /**
      * Get all ratings in a round
      * 
      * @param gameId
      * @param memeId
      * @return
      */
-    @GetMapping("/games/{gameId}/rating")
+    @GetMapping("/games/{gameId}/results/round")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public List<RatingGetDTO> getRoundRatings(@PathVariable String gameId) {
@@ -186,7 +195,7 @@ public class GameController {
      * @param memeId
      * @return
      */
-    @GetMapping("/games/{gameId}/winner")
+    @GetMapping("/games/{gameId}/results/game")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
     public List<RatingGetDTO> getWinners(@PathVariable String gameId) {

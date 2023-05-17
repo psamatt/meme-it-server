@@ -1,7 +1,5 @@
 package ch.uzh.ifi.hase.soprafs23.rest.dto.template;
 
-import java.util.UUID;
-
 public class TemplateGetDTO {
 
     private String id;

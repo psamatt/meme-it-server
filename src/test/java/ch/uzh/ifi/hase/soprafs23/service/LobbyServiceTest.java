@@ -2,9 +2,11 @@ package ch.uzh.ifi.hase.soprafs23.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.springframework.web.server.ResponseStatusException;
 
 import ch.uzh.ifi.hase.soprafs23.entity.User;
 import ch.uzh.ifi.hase.soprafs23.entity.Lobby;
@@ -36,7 +39,6 @@ public class LobbyServiceTest {
         user.setName("owner name");
 
         lobby = new Lobby();
-        lobby.setId(1L); //will this be overwritten?
         lobby.setCode("123abc");
         lobby.setName("lobby name");
         lobby.setOwner(user);
@@ -127,11 +129,12 @@ public class LobbyServiceTest {
     @Test
     public void leaveLobby_validInputs_success() {
         User leavingUser = new User();
-       // leavingUser.setId(2L);
+        leavingUser.setId("ID");
         leavingUser.setName("leavingUser");
         lobby.setPlayers(new ArrayList<>());
         lobby.setKickedPlayers(new ArrayList<>());
         lobby.addPlayer(leavingUser);
+        lobby.setOwner(leavingUser);
 
         Mockito.when(lobbyRepository.findByCode(Mockito.anyString())).thenReturn(lobby);
         Mockito.doNothing().when(lobbyRepository).delete(Mockito.any());
@@ -162,6 +165,42 @@ public class LobbyServiceTest {
         Mockito.verify(lobbyRepository, Mockito.times(1)).findByCode(Mockito.anyString());
         Mockito.verify(lobbyRepository, Mockito.times(1)).save(Mockito.any());
         assertFalse(result.getPlayers().contains(kickedUser));
+    }
+
+    @Test
+    public void joinLobby_lobbyFull_failure() {
+        User joiningUser = new User();
+        joiningUser.setName("Joining User");
+
+        LobbySetting setting = new LobbySetting();
+        setting.setMaxPlayers(1);
+        lobby.setLobbySetting(setting);
+
+        // Add a player to the lobby to make it full
+        User existingPlayer = new User();
+        existingPlayer.setName("Existing Player");
+        List<User> players = new ArrayList<>();
+        players.add(existingPlayer);
+        lobby.setPlayers(players);
+
+        Mockito.when(lobbyRepository.findByCode(Mockito.anyString())).thenReturn(lobby);
+
+        assertThrows(ResponseStatusException.class, () -> lobbyService.joinLobby(lobby.getCode(), joiningUser));
+    }
+
+    @Test
+    public void kickPlayer_notOwner_failure() {
+        User notOwner = new User();
+        notOwner.setName("Not Owner");
+        User userToKick = new User();
+        userToKick.setName("User To Kick");
+        lobby.setPlayers(new ArrayList<>());
+        lobby.setKickedPlayers(new ArrayList<>());
+        lobby.addPlayer(userToKick);
+
+        Mockito.when(lobbyRepository.findByCode(Mockito.anyString())).thenReturn(lobby);
+
+        assertThrows(ResponseStatusException.class, () -> lobbyService.kickPlayer(lobby.getCode(), notOwner, userToKick));
     }
     
 }

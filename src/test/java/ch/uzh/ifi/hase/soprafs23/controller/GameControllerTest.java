@@ -2,15 +2,14 @@ package ch.uzh.ifi.hase.soprafs23.controller;
 
 import ch.uzh.ifi.hase.soprafs23.entity.Game;
 import ch.uzh.ifi.hase.soprafs23.entity.Meme;
-import ch.uzh.ifi.hase.soprafs23.entity.Player;
 import ch.uzh.ifi.hase.soprafs23.entity.Rating;
 import ch.uzh.ifi.hase.soprafs23.entity.Template;
 import ch.uzh.ifi.hase.soprafs23.entity.User;
+import ch.uzh.ifi.hase.soprafs23.job.GameJob;
 import ch.uzh.ifi.hase.soprafs23.security.JwtSecurityConfig;
 import ch.uzh.ifi.hase.soprafs23.service.GameService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import org.jobrunr.jobs.mappers.JobMapper;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +46,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -56,11 +56,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 JwtSecurityConfig.class
         })
 public class GameControllerTest {
-
     private static final String FORMATTED_DATE = "2023-04-01T01:00:00.000+00:00";
     private static final Date DATE = Date.from(Instant.parse(FORMATTED_DATE));
     public static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer();
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -68,7 +68,7 @@ public class GameControllerTest {
     private GameService gameService;
 
     @MockBean
-    private JobMapper jobMapper;
+    private GameJob gameJob;
 
     @Test
     public void givenLobbyCode_whenCreateGame_thenReturnCreatedGame() throws Exception {
@@ -77,22 +77,10 @@ public class GameControllerTest {
 
         when(gameService.createGame(lobbyCode)).thenReturn(game);
 
-        Player firstPlayer = game.getPlayers().get(0);
         mockMvc.perform(post("/games/{lobbyCode}", lobbyCode)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("id", is(game.getId())))
-                .andExpect(jsonPath("gameState", is(game.getState().toString())))
-                .andExpect(jsonPath("roundDuration", is(game.getGameSetting().getRoundDuration())))
-                .andExpect(jsonPath("votingDuration", is(game.getGameSetting().getRatingDuration())))
-                .andExpect(jsonPath("currentRound", is(game.getCurrentRound())))
-                .andExpect(jsonPath("totalRounds", is(game.getGameSetting().getMaxRounds())))
-                .andExpect(jsonPath("startedAt", is(FORMATTED_DATE)))
-                .andExpect(jsonPath("players", hasSize(1)))
-                .andExpect(jsonPath("players[0].name", is(nullValue()))) //TODO: is this correct?
-                .andExpect(jsonPath("players[0].id", is(nullValue()))) //TODO: is this correct?
-                .andExpect(jsonPath("players[0].user.name", is(firstPlayer.getUser().getName())))
-                .andExpect(jsonPath("players[0].user.id", is(firstPlayer.getUser().getId())));
+                .andExpectAll(verifyGameResponseBody(game));
     }
 
     @Test
@@ -118,6 +106,22 @@ public class GameControllerTest {
         when(gameService.getTemplate(gameId, user)).thenReturn(template);
 
         mockMvc.perform(get("/games/{gameId}/template", gameId))
+                .andExpect(status().isOk())
+                .andExpectAll(jsonPath("id", is(template.getId())),
+                        jsonPath("imageUrl", is(template.getImageUrl())));
+    }
+
+    @Test
+    public void givenTemplateId_whenSwapTemplate_thenReturnTemplate() throws Exception {
+        String gameId = UUID.randomUUID().toString();
+        User user = defaultUser();
+        Template template = defaultTemplate("templateId");
+
+        givenUserIsAuthenticated(user);
+
+        when(gameService.swapTemplate(gameId, user)).thenReturn(template);
+
+        mockMvc.perform(put("/games/{gameId}/template", gameId))
                 .andExpect(status().isOk())
                 .andExpectAll(jsonPath("id", is(template.getId())),
                         jsonPath("imageUrl", is(template.getImageUrl())));
@@ -179,25 +183,10 @@ public class GameControllerTest {
                         .content(OBJECT_WRITER.writeValueAsString(buildRatingPostDTO())))
                 .andExpect(status().isOk()); // TODO: is this correct? Should it not be "Created"
 
-
         ArgumentCaptor<Rating> argumentCaptor = ArgumentCaptor.forClass(Rating.class);
-        verify(gameService).createRating(eq(gameId), eq(memeId), argumentCaptor.capture(), eq(user));
+        verify(gameService).createRating(eq(gameId), eq(memeId.toString()), argumentCaptor.capture(), eq(user));
         assertThat(argumentCaptor.getValue()).usingRecursiveComparison()
                 .isEqualTo(rating);
-    }
-
-    @Test
-    public void givenGameId_whenSetPlayerReady_thenReturnOkStatus() throws Exception {
-        String gameId = UUID.randomUUID().toString();
-        User user = defaultUser();
-
-        givenUserIsAuthenticated(user);
-
-        mockMvc.perform(post("/games/{gameId}/ready", gameId)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk());
-
-        verify(gameService).setPlayerReady(gameId, user);
     }
 
     @Test
@@ -207,7 +196,7 @@ public class GameControllerTest {
 
         when(gameService.getRatingsFromRound(gameId)).thenReturn(List.of(rating));
 
-        mockMvc.perform(get("/games/{gameId}/rating", gameId))
+        mockMvc.perform(get("/games/{gameId}/results/round", gameId))
                 .andExpect(status().isOk())
                 .andExpectAll(verifyRatingResponseBody(rating));
     }
@@ -219,7 +208,7 @@ public class GameControllerTest {
 
         when(gameService.getAllRatings(gameId)).thenReturn(List.of(rating));
 
-        mockMvc.perform(get("/games/{gameId}/winner", gameId))
+        mockMvc.perform(get("/games/{gameId}/results/game", gameId))
                 .andExpect(status().isOk())
                 .andExpectAll(verifyRatingResponseBody(rating));
     }
@@ -238,31 +227,34 @@ public class GameControllerTest {
                 jsonPath("$[0].user.id", is(rating.getUser().getId())),
                 jsonPath("$[0].user.name", is(rating.getUser().getName())),
                 jsonPath("$[0].meme.id", is(rating.getMeme().getId().toString())),
-                jsonPath("$[0].meme.template.id", is(rating.getMeme().getTemplate().getId())),
-                jsonPath("$[0].meme.template.imageUrl", is(rating.getMeme().getTemplate().getImageUrl())),
-                jsonPath("$[0].meme.color", is(rating.getMeme().getColor())),
-                jsonPath("$[0].meme.fontSize", is(rating.getMeme().getFontSize())),
+                jsonPath("$[0].meme.imageUrl", is(nullValue())),
+                jsonPath("$[0].meme.textBoxes", hasSize(1)),
                 jsonPath("$[0].meme.textBoxes[0].text", is(rating.getMeme().getTextBoxes().get(0).getText())),
-                jsonPath("$[0].meme.textBoxes[0].x", is(rating.getMeme().getTextBoxes().get(0).getX())),
-                jsonPath("$[0].meme.textBoxes[0].y", is(rating.getMeme().getTextBoxes().get(0).getY())),
+                jsonPath("$[0].meme.textBoxes[0].xRate", is(rating.getMeme().getTextBoxes().get(0).getxRate())),
+                jsonPath("$[0].meme.textBoxes[0].yRate", is(rating.getMeme().getTextBoxes().get(0).getyRate())),
+                jsonPath("$[0].meme.fontSize", is(rating.getMeme().getFontSize())),
+                jsonPath("$[0].meme.color", is(rating.getMeme().getColor())),
+                jsonPath("$[0].meme.backgroundColor", is(rating.getMeme().getBackgroundColor())),
                 jsonPath("$[0].meme.user.id", is(rating.getMeme().getUser().getId())),
-                jsonPath("$[0].meme.user.name", is(rating.getMeme().getUser().getName()))};
+                jsonPath("$[0].meme.user.name", is(rating.getMeme().getUser().getName())),
+                jsonPath("$[0].meme.user.executedSwaps", is(rating.getMeme().getUser().getExecutedSwaps()))};
     }
 
     private static ResultMatcher[] verifyGameResponseBody(Game game) {
+        User firstUser = game.getPlayers().get(0);
+
         return new ResultMatcher[]{
                 jsonPath("id", is(game.getId())),
                 jsonPath("gameState", is(game.getState().toString())),
                 jsonPath("roundDuration", is(game.getGameSetting().getRoundDuration())),
                 jsonPath("votingDuration", is(game.getGameSetting().getRatingDuration())),
+                jsonPath("roundResultDuration", is(game.getGameSetting().getRoundResultDuration())),
                 jsonPath("currentRound", is(game.getCurrentRound())),
                 jsonPath("totalRounds", is(game.getGameSetting().getMaxRounds())),
+                jsonPath("roundStartedAt", is(FORMATTED_DATE)),
                 jsonPath("startedAt", is(FORMATTED_DATE)),
                 jsonPath("players", hasSize(1)),
-                jsonPath("players[0].name", is(nullValue())),
-                jsonPath("players[0].id", is(nullValue())),
-                jsonPath("players[0].user.name", is(game.getPlayers().get(0).getUser().getName())),
-                jsonPath("players[0].user.id", is(game.getPlayers().get(0).getUser().getId()))};
+                jsonPath("players[0].name", is(firstUser.getName())),
+                jsonPath("players[0].id", is(firstUser.getId()))};
     }
 }
-

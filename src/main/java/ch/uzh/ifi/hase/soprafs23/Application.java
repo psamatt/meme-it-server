@@ -1,10 +1,5 @@
 package ch.uzh.ifi.hase.soprafs23;
 
-import org.jobrunr.jobs.mappers.JobMapper;
-import org.jobrunr.scheduling.JobScheduler;
-import org.jobrunr.server.BackgroundJobServer;
-import org.jobrunr.storage.InMemoryStorageProvider;
-import org.jobrunr.storage.StorageProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -37,12 +32,5 @@ public class Application {
         registry.addMapping("/**").allowedOrigins("*").allowedMethods("*");
       }
     };
-  }
-
-  @Bean
-  public StorageProvider storageProvider(JobMapper jobMapper) {
-    InMemoryStorageProvider storageProvider = new InMemoryStorageProvider();
-    storageProvider.setJobMapper(jobMapper);
-    return storageProvider;
   }
 }

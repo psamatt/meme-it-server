@@ -1,0 +1,468 @@
+{
+	"info": {
+		"_postman_id": "300dc28b-d568-4035-9521-f132aaac9af4",
+		"name": "Sopra-2023",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Create new lobby",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Game Room\",\n    \"isPublic\": true,\n    \"maxPlayers\": 4,\n    \"maxRounds\": 3,\n    \"memeChangeLimit\": 2,\n    \"superLikeLimit\": 3,\n    \"superDislikeLimit\": 1,\n    \"roundDuration\": 10,\n    \"ratingDuration\": 10\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:8080/lobbies",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"lobbies"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get lobby by code",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/lobbies/:lobbyCode",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"lobbies",
+						":lobbyCode"
+					],
+					"variable": [
+						{
+							"key": "lobbyCode",
+							"value": "fine-spirit"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get all lobbies",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/lobbies",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"lobbies"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create user",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"tester2\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:8080/users",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Join lobby",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/lobbies/:lobbyCode/players",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"lobbies",
+						":lobbyCode",
+						"players"
+					],
+					"variable": [
+						{
+							"key": "lobbyCode",
+							"value": "impossible-uncle"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Leave lobby",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/lobbies/:lobbyCode/players",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"lobbies",
+						":lobbyCode",
+						"players"
+					],
+					"variable": [
+						{
+							"key": "lobbyCode",
+							"value": "absolute-honey"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Kick user from lobby",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"test_username\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:8080/lobbies/:lobbyCode/players",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"lobbies",
+						":lobbyCode",
+						"players"
+					],
+					"variable": [
+						{
+							"key": "lobbyCode",
+							"value": "fast-control"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create game",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/games/:lobbyId",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						":lobbyId"
+					],
+					"variable": [
+						{
+							"key": "lobbyId",
+							"value": "spicy-exam"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get game",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/games/:gameId",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						":gameId"
+					],
+					"variable": [
+						{
+							"key": "gameId",
+							"value": "ac30981f-f025-41fa-b27d-6f927da14dc5"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get template",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/games/:gameId/template",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						":gameId",
+						"template"
+					],
+					"variable": [
+						{
+							"key": "gameId",
+							"value": "0e1f52e4-6961-44dd-a8c6-e99018bea0ac"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create meme",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"textBoxes\": [\n        {\n            \"text\": \"124214\",\n            \"x\": 1,\n            \"y\": 2\n        },\n        {\n            \"text\": \"1434\",\n            \"x\":2,\n            \"y\": 3\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:8080/games/:gameId/meme/:templateId",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						":gameId",
+						"meme",
+						":templateId"
+					],
+					"variable": [
+						{
+							"key": "gameId",
+							"value": "0e1f52e4-6961-44dd-a8c6-e99018bea0ac"
+						},
+						{
+							"key": "templateId",
+							"value": "0151ec21-5ff1-4f1b-99bb-e1afd84d3e1d"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get memes",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "Create rating",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"rating\": 1\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:8080/games/:gameId/rating/:memeId",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						":gameId",
+						"rating",
+						":memeId"
+					],
+					"variable": [
+						{
+							"key": "gameId",
+							"value": ""
+						},
+						{
+							"key": "memeId",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Set player ready",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/games/:gameId/ready",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						":gameId",
+						"ready"
+					],
+					"variable": [
+						{
+							"key": "gameId",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get round ratings",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/games/:gameId/rating",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						":gameId",
+						"rating"
+					],
+					"variable": [
+						{
+							"key": "gameId",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get game ratings",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8080/games/:gameId/winner",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"games",
+						":gameId",
+						"winner"
+					],
+					"variable": [
+						{
+							"key": "gameId",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "00476a00-a54b-4497-bff7-13cfb9a3b878",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
