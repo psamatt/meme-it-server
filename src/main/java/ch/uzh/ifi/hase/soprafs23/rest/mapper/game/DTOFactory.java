@@ -15,6 +15,7 @@ public class DTOFactory {
 
     @ObjectFactory
     public GameGetDTO convertEntityToGameGetDTO(Game game) {
+
         GameGetDTO gameGetDTO = new GameGetDTO();
 
         gameGetDTO.setId(game.getId());
