@@ -18,7 +18,7 @@ import java.util.List;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class GameService {
     // private final Logger log = LoggerFactory.getLogger(GameService.class);
 
-    private final IMemeApi memeApi = new ImgflipClient();
+    private final IMemeApi memeApi;
 
     private final LobbyService lobbyService;
 
@@ -42,14 +42,21 @@ public class GameService {
     @PersistenceContext
     private EntityManager entityManager;
 
+    @Autowired
     public GameService(@Qualifier("gameRepository") GameRepository gameRepository,
-            LobbyService lobbyService, MemeRepository memeRepository, TextBoxRepository textBoxRepository,
-            UserRepository userRepository) {
+                       LobbyService lobbyService, MemeRepository memeRepository, TextBoxRepository textBoxRepository,
+                       UserRepository userRepository) {
+        this(gameRepository, lobbyService, memeRepository, textBoxRepository, userRepository, new ImgflipClient());
+    }
+
+    public GameService(GameRepository gameRepository, LobbyService lobbyService, MemeRepository memeRepository, TextBoxRepository textBoxRepository, UserRepository userRepository, IMemeApi iMemeApi) {
+
         this.gameRepository = gameRepository;
+        this.lobbyService = lobbyService;
         this.memeRepository = memeRepository;
         this.textBoxRepository = textBoxRepository;
-        this.lobbyService = lobbyService;
         this.userRepository = userRepository;
+        memeApi = iMemeApi;
     }
 
     /**
